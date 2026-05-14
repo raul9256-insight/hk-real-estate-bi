@@ -6,10 +6,10 @@ import numpy as np
 
 # 1. 設置全局風格
 plt.style.use('dark_background')
-st.set_page_config(page_title="HK Real Estate BI V5.11", layout="wide", page_icon="🏢")
+st.set_page_config(page_title="HK Real Estate BI V5.12", layout="wide", page_icon="🏢")
 
-st.title("🏢 HK Real Estate BI Dashboard (V5.11)")
-st.markdown("Precision Analysis: **High-Leverage Sensitivity + 11 Full Case Studies (Incl. Receivership Risk)**")
+st.title("🏢 HK Real Estate BI Dashboard (V5.12)")
+st.markdown("Precision Analysis: **High-Leverage Sensitivity + 11 Full Case Studies (Fully Formatted)**")
 
 
 # 2. 數據載入引擎
@@ -104,11 +104,10 @@ try:
         ax.tick_params(colors='white')
         st.pyplot(fig)
 
-    # --- Module 3: ROI Calculator (新增 Case K 樂風危機案例) ---
+    # --- Module 3: ROI Calculator ---
     elif analysis_type == "3. Project ROI Calculator":
         st.header("🏗️ Real-World Project ROI Analysis")
 
-        # 格式：[GFA, Land Cost, Const Cost, ASP, Tenure, LTV]
         data_map = {
             "Case A: Kowloon Bay (COHL)": [23490, 1806880000, 5500, 17500, 4.0, 60],
             "Case B: Shau Kei Wan (Kerry)": [13759, 1383899000, 6500, 22000, 5.5, 60],
@@ -121,7 +120,6 @@ try:
             "Case I: Lohas Park 13 (Mirabelle)": [143693, 9068000000, 5500, 15652, 5.0, 55],
             "Case J: Wong Chuk Hang (SouthLand)": [53605, 4684000000, 6500, 29689, 4.5, 50],
             "Case K: Mong Kok Redevelopment (High-Leverage/Receivership)": [2787, 500000000, 6000, 17000, 6.0, 80]
-            # 新增樂風型案例
         }
 
         project_choice = st.selectbox("Select Project Case:", list(data_map.keys()))
@@ -130,23 +128,25 @@ try:
         col1, col2, col3 = st.columns(3)
         with col1:
             gfa = st.number_input("GFA (sqm)", value=int(params[0]), step=100)
+            st.caption(f"Formatted: **{gfa:,.0f} sqm**")  # 確保 GFA 也有逗號
             land = st.number_input("Land/Acquisition Cost ($)", value=int(params[1]), step=1000000)
             st.caption(f"Formatted: **${land:,.0f}**")
         with col2:
             const = st.number_input("Const Cost ($/psf)", value=int(params[2]), step=100)
+            st.caption(f"Formatted: **${const:,.0f}**")  # 確保 Const 有逗號
             asp = st.number_input("Expected Selling Price ($/psf)", value=int(params[3]), step=500)
             st.caption(f"Formatted: **${asp:,.0f}**")
         with col3:
             tenure = st.slider("Dev Tenure (Yrs)", 1.0, 10.0, float(params[4]), step=0.5)
-            hibor = st.slider("Avg Interest Rate (%)", 1.0, 10.0, 5.0, step=0.1)  # 預設推高至 5% 模擬高息環境
+            hibor = st.slider("Avg Interest Rate (%)", 1.0, 10.0, 5.0, step=0.1)
 
-        # 財務計算
+            # 財務計算
         gfa_sqft = gfa * 10.7639
         total_const = const * gfa_sqft
-        # 借貸利息 = (買地成本 + 建築成本) * LTV借貸比率 * 利率 * 年期
         interest = (land + total_const) * (params[5] / 100) * (hibor / 100) * tenure
         revenue = asp * gfa_sqft
-        total_cost = land + total_const + interest + (revenue * 0.05)
+        mkt_cost = revenue * 0.05
+        total_cost = land + total_const + interest + mkt_cost
         profit = revenue - total_cost
         roi = profit / total_cost
 
@@ -156,12 +156,19 @@ try:
         m2.metric("Break-even Price ($/psf)", f"${total_cost / gfa_sqft:,.0f}")
         m3.metric("Estimated ROI (%)", f"{roi:.1%}")
 
-        # 圓餅圖
+        # 圓餅圖：全面加入帶有逗號的絕對金額
         fig, ax = plt.subplots(figsize=(10, 6))
         fig.patch.set_facecolor('#0E1117')
-        labels = [f'Land ({land / total_cost:.0%})', f'Const ({total_const / total_cost:.0%})',
-                  f'Interest ({interest / total_cost:.0%})', 'Marketing']
-        ax.pie([land, total_const, interest, revenue * 0.05], labels=labels,
+
+        # 讓圓餅圖的標籤直接顯示具體金額（加上逗號）
+        labels = [
+            f'Land (${land:,.0f})',
+            f'Const (${total_const:,.0f})',
+            f'Interest (${interest:,.0f})',
+            f'Marketing (${mkt_cost:,.0f})'
+        ]
+
+        ax.pie([land, total_const, interest, mkt_cost], labels=labels,
                autopct='%1.1f%%', startangle=90, labeldistance=1.15,
                colors=['#1f77b4', '#ff7f0e', '#d62728', '#9467bd'], textprops={'color': "w"})
         plt.tight_layout()
@@ -170,6 +177,7 @@ try:
         st.markdown("---")
         st.subheader("💡 Project Insights & Strategy")
 
+        # 洞察文字中的數字也確保全部格式化
         if "Case A" in project_choice:
             st.info(
                 f"**穩健控制成本：** 傳統市區地段，發展商發揮強大的成本控制優勢。只要能以平均 **${asp:,.0f}/呎** 去貨，項目仍具備防守性。")
@@ -178,31 +186,31 @@ try:
                 f"**港島東精品溢價：** 雖然地價與建築成本皆高，但憑藉港島區稀缺性，若能維持 **${asp:,.0f}** 以上均價，利潤率依然可觀。")
         elif "Case C" in project_choice:
             st.warning(
-                f"**鐵路樞紐巨無霸：** 規模效應雖能降低平均成本，但在 **{hibor}%** 高息環境下，高額補地價帶來的利息開支極高，去貨速度是致勝關鍵。")
+                f"**鐵路樞紐巨無霸：** 規模效應雖能降低平均成本，但在 **{hibor}%** 高息環境下，高達 **${land:,.0f}** 補地價帶來的利息開支極高，去貨速度是致勝關鍵。")
         elif "Case D" in project_choice:
             st.error(
                 f"🚨 **災難性利息侵蝕：** 典型生不逢時。高位極高溢價投地加上 8 年開發週期，在 **{hibor}%** 利率下，龐大利息幾乎吞噬所有潛在利潤。")
         elif "Case E" in project_choice:
             st.success(
-                f"**納米樓快打慢：** 投資額低，主打細單位。追求『貨如輪轉』，只要能在短時間內清倉，即便呎價承壓仍能維持健康回報。")
+                f"**納米樓快打慢：** 投資額低（地價約 **${land:,.0f}**），主打細單位。追求『貨如輪轉』，只要能在短時間內清倉，即便呎價承壓仍能維持健康回報。")
         elif "Case F" in project_choice:
             st.warning(
                 f"⚠️ **流血開價求生：** 高價拿地後面對市況逆轉，被迫貼近保本價（**${total_cost / gfa_sqft:,.0f}/呎**）推盤，反映寧願微蝕也要套現的現金流保衛戰。")
         elif "Case G" in project_choice:
             st.success(
-                f"💎 **超級豪宅的護城河：** 建築成本高達 $12,000/呎，但客群價格敏感度低。低槓桿讓發展商有底氣慢慢『守』，不受高息逼迫。")
+                f"💎 **超級豪宅的護城河：** 建築成本高達 **${const:,.0f}/呎**，但客群價格敏感度低。低槓桿讓發展商有底氣慢慢『守』，不受高息逼迫。")
         elif "Case H" in project_choice:
             st.info(
                 f"**市區重建實用戰術：** 透過精準成本控制與貼市開價（**${asp:,.0f}/呎**），在疲弱市況中吸引剛性需求，確保微利離場。")
         elif "Case I" in project_choice:
             st.info(
-                f"**『康城終章』的博弈：** 巨量體代表極大去貨風險。預期開價正為咗喺高息環境下快速回籠資金，降低長期利息侵蝕。")
+                f"**『康城終章』的博弈：** 巨量體代表極大去貨風險。預期開價 **${asp:,.0f}/呎** 正為咗喺高息環境下快速回籠資金，降低長期利息侵蝕。")
         elif "Case J" in project_choice:
             st.success(
-                f"🏆 **完美的逃頂時機：** 在 2021 樓市極高點以近 $30,000 呎價發售，發展商成功在市況逆轉前鎖定高達 **${profit / 100000000:,.2f} 億港元** 利潤。")
+                f"🏆 **完美的逃頂時機：** 在 2021 樓市極高點以近 **$30,000** 呎價發售，發展商成功在市況逆轉前鎖定高達 **${profit / 100000000:,.2f} 億港元** 利潤。")
         elif "Case K" in project_choice:
             st.error(
-                f"☠️ **高槓桿死亡交叉 (Receivership Risk)：** 呢個係模擬樂風集團等進取型中小型發展商嘅危險劇本。市區舊樓併購時間長達 **{tenure} 年**，加上高達 **{params[5]}% 嘅 LTV 借貸比率**。喺 **{hibor}%** 嘅高息環境下，你會見到圓餅圖中嘅【利息支出 (Interest)】已經大幅膨脹。如果開售呎價由原本預期嘅兩萬幾蚊跌到 **${asp:,.0f}**，淨利潤會直接變成負數（見紅）。當資產價值跌穿貸款額，就會觸發債權人 Call Loan 甚至接管 (Receivership) 地盤。")
+                f"☠️ **高槓桿死亡交叉 (Receivership Risk)：** 呢個係模擬樂風集團等進取型中小型發展商嘅危險劇本。市區舊樓併購時間長達 **{tenure} 年**，加上高達 **{params[5]}% 嘅 LTV 借貸比率**。喺 **{hibor}%** 嘅高息環境下，你會見到圓餅圖中嘅【利息支出】高達 **${interest:,.0f}**。如果開售呎價由原本預期嘅 **$22,000** 跌到得返 **${asp:,.0f}**，淨利潤會直接變成負數。當資產價值跌穿貸款額，就會觸發債權人 Call Loan 甚至接管 (Receivership) 地盤。")
 
 except Exception as e:
     st.error(f"Execution Error: {e}")
