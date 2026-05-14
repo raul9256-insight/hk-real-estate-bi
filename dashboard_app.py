@@ -6,10 +6,10 @@ import numpy as np
 
 # 1. 設置全局風格
 plt.style.use('dark_background')
-st.set_page_config(page_title="HK Real Estate BI V5.12", layout="wide", page_icon="🏢")
+st.set_page_config(page_title="HK Real Estate BI V5.13", layout="wide", page_icon="🏢")
 
-st.title("🏢 HK Real Estate BI Dashboard (V5.12)")
-st.markdown("Precision Analysis: **High-Leverage Sensitivity + 11 Full Case Studies (Fully Formatted)**")
+st.title("🏢 HK Real Estate BI Dashboard (V5.13)")
+st.markdown("Precision Analysis: **High-Leverage Sensitivity + Fully Formatted Financial Inputs**")
 
 
 # 2. 數據載入引擎
@@ -125,17 +125,30 @@ try:
         project_choice = st.selectbox("Select Project Case:", list(data_map.keys()))
         params = data_map[project_choice]
 
+
+        # 輔助解析函數：將帶逗號的字串安全轉換為數字
+        def parse_currency(val, default):
+            try:
+                return float(str(val).replace(",", ""))
+            except:
+                return float(default)
+
+
         col1, col2, col3 = st.columns(3)
         with col1:
-            gfa = st.number_input("GFA (sqm)", value=int(params[0]), step=100)
-            st.caption(f"Formatted: **{gfa:,.0f} sqm**")  # 確保 GFA 也有逗號
-            land = st.number_input("Land/Acquisition Cost ($)", value=int(params[1]), step=1000000)
-            st.caption(f"Formatted: **${land:,.0f}**")
+            gfa_raw = st.text_input("GFA (sqm)", value=f"{int(params[0]):,}")
+            gfa = parse_currency(gfa_raw, params[0])
+
+            land_raw = st.text_input("Land/Acquisition Cost ($)", value=f"{int(params[1]):,}")
+            land = parse_currency(land_raw, params[1])
+
         with col2:
-            const = st.number_input("Const Cost ($/psf)", value=int(params[2]), step=100)
-            st.caption(f"Formatted: **${const:,.0f}**")  # 確保 Const 有逗號
-            asp = st.number_input("Expected Selling Price ($/psf)", value=int(params[3]), step=500)
-            st.caption(f"Formatted: **${asp:,.0f}**")
+            const_raw = st.text_input("Const Cost ($/psf)", value=f"{int(params[2]):,}")
+            const = parse_currency(const_raw, params[2])
+
+            asp_raw = st.text_input("Expected Selling Price ($/psf)", value=f"{int(params[3]):,}")
+            asp = parse_currency(asp_raw, params[3])
+
         with col3:
             tenure = st.slider("Dev Tenure (Yrs)", 1.0, 10.0, float(params[4]), step=0.5)
             hibor = st.slider("Avg Interest Rate (%)", 1.0, 10.0, 5.0, step=0.1)
@@ -148,7 +161,9 @@ try:
         mkt_cost = revenue * 0.05
         total_cost = land + total_const + interest + mkt_cost
         profit = revenue - total_cost
-        roi = profit / total_cost
+
+        # 防止除以零
+        roi = profit / total_cost if total_cost > 0 else 0
 
         st.markdown("---")
         m1, m2, m3 = st.columns(3)
@@ -156,18 +171,15 @@ try:
         m2.metric("Break-even Price ($/psf)", f"${total_cost / gfa_sqft:,.0f}")
         m3.metric("Estimated ROI (%)", f"{roi:.1%}")
 
-        # 圓餅圖：全面加入帶有逗號的絕對金額
+        # 圓餅圖
         fig, ax = plt.subplots(figsize=(10, 6))
         fig.patch.set_facecolor('#0E1117')
-
-        # 讓圓餅圖的標籤直接顯示具體金額（加上逗號）
         labels = [
             f'Land (${land:,.0f})',
             f'Const (${total_const:,.0f})',
             f'Interest (${interest:,.0f})',
             f'Marketing (${mkt_cost:,.0f})'
         ]
-
         ax.pie([land, total_const, interest, mkt_cost], labels=labels,
                autopct='%1.1f%%', startangle=90, labeldistance=1.15,
                colors=['#1f77b4', '#ff7f0e', '#d62728', '#9467bd'], textprops={'color': "w"})
@@ -177,7 +189,6 @@ try:
         st.markdown("---")
         st.subheader("💡 Project Insights & Strategy")
 
-        # 洞察文字中的數字也確保全部格式化
         if "Case A" in project_choice:
             st.info(
                 f"**穩健控制成本：** 傳統市區地段，發展商發揮強大的成本控制優勢。只要能以平均 **${asp:,.0f}/呎** 去貨，項目仍具備防守性。")
